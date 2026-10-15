@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Activity, BookOpen, Building2, ChevronDown, ClipboardList, CreditCard,
-  FileCheck2, FileSearch, FlaskConical, FolderOpen, GitBranch, Landmark, LayoutDashboard,
-  ListChecks, LogOut, Menu, ShieldCheck, Sprout, Users, Wallet, X } from 'lucide-react';
+  FileCheck2, FileSearch, FlaskConical, GitBranch, Landmark, LayoutDashboard,
+  ListChecks, LogOut, Menu, ShieldCheck, Sprout, Wallet, X } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { Link, Navigate, NavLink, Outlet, Route, Routes, useLocation } from 'react-router-dom';
 import Workbench from './Workbench';

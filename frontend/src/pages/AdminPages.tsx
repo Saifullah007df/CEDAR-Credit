@@ -4,7 +4,7 @@ import { ArrowLeft, ArrowRight, Building2, ClipboardList, FileCheck2, Plus, Wall
 import { Link, useParams } from 'react-router-dom';
 import { DataState, Empty, Feedback, FormField, Metric, Notice,
   PageTitle, Panel, StatePill, Submit, money, useAction, useLoad } from '../components/Shared';
-import type { Evidence, Evaluation, Lender, LenderPolicy, LoanApplication, LoanProduct,
+import type { Evidence, Evaluation, Lender, LoanApplication, LoanProduct,
   SimulatedLoan } from '../lib/types';
 
 export function AdminDashboard() {

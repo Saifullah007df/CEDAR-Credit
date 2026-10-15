@@ -176,16 +176,16 @@ function Operation({ action }: { action: Action }) {
 }
 
 export default function Workbench() {
-  const { token, identity, logout } = useSession();
+  const { identity, logout } = useSession();
   const [mode, setMode] = useState<Mode>('borrower');
   const available = modes.filter(m => !identity || m.roles.includes(identity.role));
   const displayedMode = available.some(m=>m.id===mode) ? mode : available[0]?.id ?? 'borrower';
   return <div className="workbench">
     <div className="heading"><p className="eyebrow">CEDAR CREDIT · LIVE API WORKFLOWS</p><h1>Operations Workbench</h1>
       <p>Functional application, evidence, rules, review and mock loan operations against the FastAPI backend. All loan and lender activity is synthetic.</p></div>
-    {token && identity ? <>
+    {identity ? <>
       <div className="session-bar"><span><CheckCircle2 size={17}/> Signed in as <strong>{identity.email}</strong> · {identity.role}</span>
-        <button type="button" onClick={logout}><LogOut size={16}/> Sign out</button></div>
+        <button type="button" onClick={() => void logout()}><LogOut size={16}/> Sign out</button></div>
       <div className="mode-selector">{available.map(m => <button key={m.id} type="button" className={displayedMode===m.id?'selected':''} onClick={()=>setMode(m.id)}>{m.label}</button>)}</div>
       <div className="notice"><FlaskConical size={19}/> These operations are not production credit decisions. API authorization still applies regardless of the selected visual tab.</div>
       <div className="operations">{actions[displayedMode].map(action => <Operation key={action.label} action={action}/>)}</div>

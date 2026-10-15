@@ -3,7 +3,7 @@ import type { FormEvent } from 'react';
 import { ArrowLeft, ArrowRight, CheckCircle2, FileUp, Plus, Sprout } from 'lucide-react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useSession } from '../lib/session';
-import { DataState, Empty, ErrorBanner, Feedback, FormField, Loading, Metric, Notice,
+import { DataState, Empty, ErrorBanner, Feedback, FormField, Metric, Notice,
   PageTitle, Panel, StatePill, Submit, formatDate, money, useAction, useLoad } from '../components/Shared';
 import type { Counterfactual, Document, Evidence, Evaluation, Installment,
   LoanApplication, LoanOffer, SimulatedLoan, UtilizationClaim } from '../lib/types';
@@ -287,7 +287,7 @@ export function BorrowerApplicationDetail() {
   return <>
     <Link to="/borrower/applications" className="back-link"><ArrowLeft size={16}/> My applications</Link>
     <DataState state={state}>{app=><>
-      <PageTitle eyebrow="BORROWER / APPLICATION #"+app.id title={app.loan_purpose}
+      <PageTitle eyebrow={"BORROWER / APPLICATION #"+app.id} title={app.loan_purpose}
         description="Follow the evidence and lending process for your synthetic application."
         action={<StatePill value={app.status}/>}/>
       <div className="metric-row"><Metric label="Requested amount" value={money(app.requested_amount)}/>
