@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { NavLink, Route, Routes } from 'react-router-dom';
-import { Activity, ArrowRight, BookOpen, Building2, CheckCircle2, Database, FileSearch, GitBranch, Layers, LockKeyhole, Menu, ShieldCheck, Sprout, Users, Workflow, X } from 'lucide-react';
+import { Activity, BookOpen, Building2, CheckCircle2, Database, FileSearch, GitBranch, Layers, LockKeyhole, Menu, ShieldCheck, Sprout, Users, Workflow, X } from 'lucide-react';
 import Workbench from './Workbench';
 import { api, type ArchitectureLayer, type Capability } from './lib/api';
 
@@ -53,7 +53,7 @@ function Overview() {
   const capabilities = useRemote(api.capabilities);
   const implemented = capabilities.data?.capabilities.filter(c => c.status === 'implemented').length ?? 0;
   return <>
-    <Heading eyebrow="RESEARCH PLATFORM · PHASE 1" title="A clearer path to responsible agricultural credit" description="CEDAR-Credit connects document evidence, lending rules, and transparent decision workflows. This release contains the verified application foundation; financial operations will be added in subsequent phases." />
+    <Heading eyebrow="RESEARCH PLATFORM · INTEGRATION PHASE" title="A clearer path to responsible agricultural credit" description="CEDAR-Credit connects document evidence, lending rules, and transparent decision workflows. This prototype contains API-backed research workflows and mock loan services. Real financial integrations remain out of scope." />
     <div className="stats">
       <div className="stat"><span>Backend API</span><strong className={health.data?.status === 'ok' ? 'healthy' : ''}>{health.loading ? 'Checking…' : health.data?.status === 'ok' ? 'Online' : 'Offline'}</strong><small>Real FastAPI health endpoint</small></div>
       <div className="stat"><span>Current phase</span><strong>{capabilities.data?.current_phase ?? '—'} / 10</strong><small>Incremental research build</small></div>
@@ -64,25 +64,7 @@ function Overview() {
       {capabilities.error ? <ErrorState message={capabilities.error} /> : capabilities.loading ? <p className="muted">Loading module catalog…</p> :
         <div className="module-grid">{capabilities.data?.capabilities.map((c: Capability) => <article key={c.id} className="module"><div className="module-top"><span className="phase">PHASE {c.phase}</span><Badge status={c.status}/></div><h3>{c.title}</h3><p>{c.description}</p></article>)}</div>}
     </section>
-    <Notice>No borrower records, lending decisions, bank integrations, or AI predictions are implemented in Phase 1. This interface does not simulate those capabilities.</Notice>
-  </>;
-}
-
-const plannedPages: Record<string, { title: string; phase: string; description: string; items: string[] }> = {
-  borrower: { title: 'Borrower Portal', phase: 'PHASE 3', description: 'Application and FPO profile workflows will be implemented with secured backend data.', items: ['Borrower profiles', 'Agricultural loan applications', 'Evidence upload', 'Loan status and offers'] },
-  lender: { title: 'Lender Portal', phase: 'PHASES 3–4', description: 'Lender-specific loan products, versioned policies, and controlled decisions.', items: ['Lender product catalog', 'Configurable eligibility rules', 'Review of permitted applications', 'Explainable outcomes'] },
-  admin: { title: 'Platform Administration', phase: 'PHASES 2–3', description: 'The administrative workspace will manage verified activity and permissions.', items: ['Identity and roles', 'Lender administration', 'Application monitoring', 'System audit events'] },
-  review: { title: 'Human Review Workspace', phase: 'PHASE 7', description: 'Human verification is scheduled only after the evidence and dependency systems are functional.', items: ['Uncertain evidence queue', 'Decision-impact prioritization', 'Source-backed correction', 'Selective recalculation'] },
-  research: { title: 'CEDAR Research Engine', phase: 'PHASES 4–7', description: 'The central algorithms will be implemented in testable server-side services.', items: ['RG-02 evidence records', 'RG-03 lending policies', 'Counterfactual stability', 'RG-09 adaptive review'] },
-};
-
-function Planned({ id }: { id: keyof typeof plannedPages }) {
-  const content = plannedPages[id];
-  return <>
-    <Heading eyebrow={`${content.phase} · PLANNED`} title={content.title} description={content.description} />
-    <section className="surface"><div className="section-header"><h2>Planned capabilities</h2><Badge status="planned" /></div><div className="future-grid">{content.items.map(item => <div className="future-item" key={item}><Layers size={18} aria-hidden="true"/><span>{item}</span></div>)}</div></section>
-    <Notice>Not implemented in Phase 1. Controls for live applications or credit decisions are intentionally unavailable until database, authorization, and corresponding services are tested.</Notice>
-    <NavLink className="text-link" to="/operations">Try the functional API workbench <ArrowRight size={16}/></NavLink>
+    <Notice>This research prototype supports synthetic borrower records and preliminary lender-rule outcomes. No real bank approvals, transfers, KYC, or AI fraud verdicts are offered.</Notice>
   </>;
 }
 
@@ -106,11 +88,11 @@ function Shell() {
       <div className="brand"><div className="brand-icon"><Sprout size={25}/></div><div><strong>CEDAR-Credit</strong><span>Research Marketplace</span></div><button className="mobile-close" onClick={() => setOpen(false)} aria-label="Close navigation"><X size={21}/></button></div>
       <div className="side-label">WORKSPACE</div>
       <nav aria-label="Main navigation">{pages.map(p => <NavLink end={p.path === '/'} key={p.path} to={p.path} onClick={() => setOpen(false)} className={({isActive}) => `nav-link ${isActive ? 'active' : ''}`}><p.icon size={18} aria-hidden="true"/><span>{p.name}</span></NavLink>)}</nav>
-      <div className="side-bottom"><div className="side-status"><CheckCircle2 size={17}/> Foundation · Phase 1</div><span>Synthetic-data research prototype</span></div>
+      <div className="side-bottom"><div className="side-status"><CheckCircle2 size={17}/> Research prototype · Phase 10</div><span>Synthetic-data research prototype</span></div>
     </aside>
     {open && <button className="overlay" aria-label="Close navigation" onClick={() => setOpen(false)} />}
     <div className="main-col"><header className="topbar"><button className="mobile-menu" aria-label="Open navigation" onClick={() => setOpen(true)}><Menu size={22}/></button><div className="breadcrumb">CEDAR-Credit <span>/</span> Research Platform</div><div className="topbar-right"><span className="top-chip"><Database size={15}/> API-backed scaffold</span><span className="avatar" aria-label="Demo platform user">C</span></div></header>
-      <main className="content"><Routes><Route path="/" element={<Overview/>}/><Route path="/operations" element={<Workbench/>}/><Route path="/borrower" element={<Planned id="borrower"/>}/><Route path="/lender" element={<Planned id="lender"/>}/><Route path="/admin" element={<Planned id="admin"/>}/><Route path="/review" element={<Planned id="review"/>}/><Route path="/research" element={<Planned id="research"/>}/><Route path="/architecture" element={<Architecture/>}/><Route path="*" element={<div className="surface"><h1>Page not found</h1><NavLink className="text-link" to="/">Return to overview</NavLink></div>}/></Routes></main>
+      <main className="content"><Routes><Route path="/" element={<Overview/>}/><Route path="/operations" element={<Workbench/>}/><Route path="/borrower" element={<Workbench/>}/><Route path="/lender" element={<Workbench/>}/><Route path="/admin" element={<Workbench/>}/><Route path="/review" element={<Workbench/>}/><Route path="/research" element={<Workbench/>}/><Route path="/architecture" element={<Architecture/>}/><Route path="*" element={<div className="surface"><h1>Page not found</h1><NavLink className="text-link" to="/">Return to overview</NavLink></div>}/></Routes></main>
       <footer className="footer">CEDAR-Credit · Research prototype · Not a banking or lending service</footer>
     </div>
   </div>;
