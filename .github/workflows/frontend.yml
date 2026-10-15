@@ -24,6 +24,8 @@ jobs:
           node-version: '22'
       - name: Install frontend dependencies
         run: npm install --no-audit --no-fund
+      - name: Verify role-based portal routes
+        run: npm run test
       - name: TypeScript type check
         run: npm run typecheck
       - name: Production Vite build
