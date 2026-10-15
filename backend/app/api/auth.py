@@ -1,11 +1,13 @@
-"""Borrower self-registration; platform administrators are provisioned via CLI."""
+"""Borrower signup, cookie-backed browser login, bearer API compatibility."""
 from pydantic import BaseModel, Field
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request, Response
+from fastapi.responses import JSONResponse
 from sqlalchemy import select
 from sqlalchemy.orm import Session
+from app.core.config import get_settings
 from app.db import get_db
 from app.models import User, Borrower
-from app.security import hash_password, verify_password, create_token, current_user, audit
+from app.security import SESSION_COOKIE, hash_password, verify_password, create_token, current_user, audit
 
 router = APIRouter(prefix="/api/v1/auth", tags=["identity"])
 
@@ -39,8 +41,22 @@ def login(payload: Login, db: Session = Depends(get_db)):
     user = db.scalar(select(User).where(User.email == payload.email.strip().lower()))
     if not user or not user.active or not verify_password(payload.password, user.password_hash):
         raise HTTPException(401, "Incorrect credentials")
-    return {"access_token": create_token(user), "token_type": "bearer"}
+    token = create_token(user)
+    response = JSONResponse({"access_token": token, "token_type": "bearer"})
+    response.set_cookie(
+        key=SESSION_COOKIE, value=token, httponly=True,
+        secure=get_settings().environment == "production",
+        samesite="strict", path="/api/v1", max_age=8 * 3600,
+    )
+    return response
 
 @router.get("/me")
-def me(user: User = Depends(current_user)):
-    return {"id": user.id, "email": user.email, "role": user.role, "lender_id": user.lender_id}
+def me(request: Request, user: User = Depends(current_user)):
+    return {"id": user.id, "email": user.email, "role": user.role,
+            "lender_id": user.lender_id,
+            "csrf_token": request.state.auth_payload.get("csrf")}
+
+@router.post("/logout")
+def logout(response: Response):
+    response.delete_cookie(SESSION_COOKIE, path="/api/v1", samesite="strict")
+    return {"signed_out": True}
