@@ -8,7 +8,7 @@ import Workbench from './Workbench';
 import { useSession, type Role } from './lib/session';
 import { AuthPage, roleHome } from './pages/AuthPages';
 import { BorrowerDashboard, BorrowerApplications, ApplyLoan, BorrowerApplicationDetail, BorrowerLoans, LoanDetail } from './pages/BorrowerPages';
-import { AdminDashboard, AdminApplications, AdminApplicationDetail, AdminLoans } from './pages/AdminPages';
+import { AdminDashboard, AdminApplications, AdminApplicationDetail, AdminLoans, AdminLoanDetail } from './pages/AdminPages';
 import { ManageLenders, ManageProducts, ManagePolicies, ManageUsers } from './pages/AdminManagePages';
 import { LenderDashboard, LenderProducts, LenderPolicies } from './pages/LenderPages';
 import { ReviewerDashboard, ReviewTaskDetail } from './pages/ReviewPages';
@@ -161,6 +161,7 @@ export default function App() {
         <Route path="/admin/applications" element={<AdminApplications/>}/>
         <Route path="/admin/applications/:id" element={<AdminApplicationDetail/>}/>
         <Route path="/admin/loans" element={<AdminLoans/>}/>
+        <Route path="/admin/loans/:id" element={<AdminLoanDetail/>}/>
         <Route path="/developer" element={<Workbench/>}/>
       </Route>
     </Route>

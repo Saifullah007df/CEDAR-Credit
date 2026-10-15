@@ -330,14 +330,16 @@ export function LoanDetail() {
   const loan=useLoad<SimulatedLoan>(valid?'/api/v1/loans/'+loanId:null);
   const schedule=useLoad<{installments:Installment[]}>(valid?'/api/v1/loans/'+loanId+'/schedule':null);
   const claims=useLoad<UtilizationClaim[]>(valid?'/api/v1/loans/'+loanId+'/utilization':null);
+  const documents=useLoad<Document[]>(loan.data?'/api/v1/applications/'+loan.data.application_id+'/documents':null);
   const {execute,busy,error,success}=useAction();
   const [category,setCategory]=useState('Seeds');
   const [amount,setAmount]=useState('12000');
   const [note,setNote]=useState('Seed invoice for demonstration');
+  const [documentId,setDocumentId]=useState('');
   async function submit(e:FormEvent){
     e.preventDefault();
     const result=await execute('POST','/api/v1/loans/'+loanId+'/utilization',
-      {category,amount:Number(amount),note},'Unverified utilization claim recorded.');
+      {category,amount:Number(amount),note,document_id:documentId?Number(documentId):null},'Unverified utilization claim recorded.');
     if(result)claims.refresh();
   }
   return <>
@@ -368,6 +370,12 @@ export function LoanDetail() {
         <FormField label="Expense category"><input value={category} required onChange={e=>setCategory(e.target.value)}/></FormField>
         <FormField label="Amount"><input type="number" min="1" required value={amount} onChange={e=>setAmount(e.target.value)}/></FormField>
         <FormField label="Explanation"><textarea required value={note} onChange={e=>setNote(e.target.value)}/></FormField>
+        <FormField label="Supporting document (optional)">
+          <select value={documentId} onChange={e=>setDocumentId(e.target.value)}>
+            <option value="">No document linked — cannot complete manual evidence review</option>
+            {documents.data?.map(d=><option key={d.id} value={d.id}>{d.label} · {d.filename}</option>)}
+          </select>
+        </FormField>
         <Feedback error={error} success={success}/><Submit busy={busy}>Add unverified claim</Submit>
       </form>
     </Panel>

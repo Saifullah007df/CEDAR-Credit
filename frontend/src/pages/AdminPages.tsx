@@ -3,9 +3,9 @@ import type { FormEvent } from 'react';
 import { ArrowLeft, ArrowRight, Building2, ClipboardList, FileCheck2, Plus, Wallet } from 'lucide-react';
 import { Link, useParams } from 'react-router-dom';
 import { DataState, Empty, Feedback, FormField, Metric, Notice,
-  PageTitle, Panel, StatePill, Submit, money, useAction, useLoad } from '../components/Shared';
+  PageTitle, Panel, StatePill, Submit, money, useAction, useLoad, formatDate } from '../components/Shared';
 import type { Evidence, Evaluation, Lender, LoanApplication, LoanProduct,
-  SimulatedLoan } from '../lib/types';
+  SimulatedLoan, Installment, UtilizationClaim } from '../lib/types';
 
 export function AdminDashboard() {
   const lenders=useLoad<Lender[]>('/api/v1/lenders');
@@ -176,10 +176,66 @@ export function AdminLoans() {
                 value={paymentByLoan[l.id]||''} onChange={e=>setPaymentByLoan(x=>({...x,[l.id]:e.target.value}))}/>
               <button className="btn btn-primary btn-sm" disabled={busy||!paymentByLoan[l.id]}
                 onClick={()=>void repay(l.id)}>Record payment</button>
-            </>}</div>
+            </>}
+            <Link className="action-link" to={"/admin/loans/"+l.id}>View schedule and utilization <ArrowRight size={15}/></Link>
+          </div>
         </div>)}</div>}</DataState>
     </Panel>
     <Feedback error={error} success={success}/>
     <Notice>These records are educational demonstrations, not banking transfers, obligations or regulated servicing activity.</Notice>
+  </>;
+}
+
+
+export function AdminLoanDetail() {
+  const {id}=useParams();
+  const loanId=Number(id);
+  const loan=useLoad<SimulatedLoan>('/api/v1/loans/'+loanId);
+  const schedule=useLoad<{installments:Installment[]}>('/api/v1/loans/'+loanId+'/schedule');
+  const claims=useLoad<UtilizationClaim[]>('/api/v1/loans/'+loanId+'/utilization');
+  const {execute,busy,error,success}=useAction();
+  async function review(claimId:number){
+    const result=await execute('POST','/api/v1/admin/utilization/'+claimId+'/review',{},
+      'Evidence link marked as reviewed; no fraud judgment was made.');
+    if(result)claims.refresh();
+  }
+  return <>
+    <Link className="back-link" to="/admin/loans"><ArrowLeft size={16}/> Mock loan servicing</Link>
+    <DataState state={loan}>{l=><>
+      <PageTitle eyebrow="PLATFORM ADMIN / MOCK LOAN" title={'Loan #'+l.id}
+        description={'Application #'+l.application_id+' · Demonstration servicing'}
+        action={<StatePill value={l.status}/>}/>
+      <div className="metric-row">
+        <Metric label="Simulated principal" value={money(l.amount)}/>
+        <Metric label="APR" value={l.apr+'%'}/>
+        <Metric label="Mock disbursement" value={formatDate(l.disbursed_at)}/>
+      </div>
+    </>}</DataState>
+    <Panel title="Amortization and payment tracking">
+      <DataState state={schedule}>{data=>data.installments.length===0
+        ? <Empty title="No schedule yet" description="Record a mock disbursement on the Servicing page first."/>
+        : <div className="data-table-wrap"><table className="data-table">
+          <thead><tr><th>Installment</th><th>Due date</th><th>Due</th><th>Paid</th><th>Status</th></tr></thead>
+          <tbody>{data.installments.map(i=><tr key={i.installment}>
+            <td>#{i.installment}</td><td>{formatDate(i.due_at)}</td><td>{money(i.amount_due)}</td>
+            <td>{money(i.amount_paid)}</td><td><StatePill value={i.status}/></td>
+          </tr>)}</tbody></table></div>}</DataState>
+    </Panel>
+    <Panel title="Utilization evidence review" sub="Only document-backed claims can be marked reviewed. Never an automated fraud determination.">
+      <DataState state={claims}>{items=>items.length===0
+        ? <Empty title="No use-of-funds claims" description="Borrower has not recorded any synthetic expenditures."/>
+        : <div className="item-list">{items.map(c=><div className="servicing-row" key={c.id}>
+          <div className="servicing-info">
+            <strong>{c.category} · {money(c.amount)}</strong>
+            <small>{c.note} · Documents: {c.links.map(l=>'#'+l.document_id).join(', ')||'None linked'}</small>
+            <StatePill value={c.status}/>
+          </div>
+          {c.links.length>0&&c.status==='unverified'&&
+            <button className="btn btn-primary btn-sm" onClick={()=>void review(c.id)} disabled={busy}>
+              Record manual evidence review</button>}
+        </div>)}</div>}</DataState>
+    </Panel>
+    <Feedback error={error} success={success}/>
+    <Notice>Evidence-present status is not confirmation of acceptable loan use, real-world KYC, or fraud detection.</Notice>
   </>;
 }
