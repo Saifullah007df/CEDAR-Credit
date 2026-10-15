@@ -1,101 +1,176 @@
-import { useEffect, useState } from 'react';
-import { NavLink, Route, Routes } from 'react-router-dom';
-import { Activity, ArrowRight, BookOpen, Building2, CheckCircle2, Database, FileSearch, GitBranch, Layers, LockKeyhole, Menu, ShieldCheck, Sprout, Users, Workflow, X } from 'lucide-react';
+import { useState } from 'react';
+import { Activity, BookOpen, Building2, ChevronDown, ClipboardList, CreditCard,
+  FileCheck2, FileSearch, FlaskConical, FolderOpen, GitBranch, Landmark, LayoutDashboard,
+  ListChecks, LogOut, Menu, ShieldCheck, Sprout, Users, Wallet, X } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
+import { Link, Navigate, NavLink, Outlet, Route, Routes, useLocation } from 'react-router-dom';
 import Workbench from './Workbench';
-import { api, type ArchitectureLayer, type Capability } from './lib/api';
+import { useSession, type Role } from './lib/session';
+import { AuthPage, roleHome } from './pages/AuthPages';
+import { BorrowerDashboard, BorrowerApplications, ApplyLoan, BorrowerApplicationDetail, BorrowerLoans, LoanDetail } from './pages/BorrowerPages';
+import { AdminDashboard, AdminLenders, AdminApplications, AdminApplicationDetail, AdminLoans } from './pages/AdminPages';
+import { LenderDashboard, LenderProducts, LenderPolicies } from './pages/LenderPages';
+import { ReviewerDashboard, ReviewTaskDetail } from './pages/ReviewPages';
+import { ResearchDashboard, ResearchApplication } from './pages/ResearchPages';
 
-type LoadState<T> = { data: T | null; error: string | null; loading: boolean };
+type NavItem = { label: string; to: string; icon: LucideIcon; end?: boolean };
+type Workspace = { title: string; tagline: string; links: NavItem[]; roles: Role[] };
 
-function useRemote<T>(load: (signal: AbortSignal) => Promise<T>): LoadState<T> {
-  const [state, setState] = useState<LoadState<T>>({ data: null, error: null, loading: true });
-  useEffect(() => {
-    const controller = new AbortController();
-    setState({ data: null, error: null, loading: true });
-    load(controller.signal).then(data => {
-      if (!controller.signal.aborted) setState({ data, error: null, loading: false });
-    }).catch((error: unknown) => {
-      if (!controller.signal.aborted) setState({ data: null, error: error instanceof Error ? error.message : 'Request failed', loading: false });
-    });
-    return () => controller.abort();
-  }, [load]);
-  return state;
+const workspaces: Record<string, Workspace> = {
+  borrower: {
+    title: 'Borrower Portal', tagline: 'Apply · Track · Compare',
+    roles: ['borrower'],
+    links: [
+      {label:'Dashboard',to:'/borrower',icon:LayoutDashboard,end:true},
+      {label:'My Applications',to:'/borrower/applications',icon:ClipboardList},
+      {label:'Apply for Loan',to:'/borrower/apply',icon:CreditCard},
+      {label:'My Loans',to:'/borrower/loans',icon:Wallet},
+    ],
+  },
+  lender: {
+    title:'Lender Portal',tagline:'Products · Policies',roles:['lender_admin','platform_admin'],
+    links:[
+      {label:'Dashboard',to:'/lender',icon:LayoutDashboard,end:true},
+      {label:'Loan Products',to:'/lender/products',icon:Landmark},
+      {label:'Lending Policies',to:'/lender/policies',icon:ListChecks},
+    ],
+  },
+  admin: {
+    title:'Platform Admin',tagline:'Marketplace oversight',roles:['platform_admin'],
+    links:[
+      {label:'Dashboard',to:'/admin',icon:LayoutDashboard,end:true},
+      {label:'Manage Lenders',to:'/admin/lenders',icon:Building2},
+      {label:'Applications',to:'/admin/applications',icon:ClipboardList},
+      {label:'Mock Loan Servicing',to:'/admin/loans',icon:Wallet},
+      {label:'Review Queue',to:'/review',icon:FileCheck2},
+      {label:'CEDAR Research',to:'/research',icon:GitBranch},
+      {label:'API Console (dev)',to:'/developer',icon:FlaskConical},
+    ],
+  },
+  review: {
+    title:'Human Review',tagline:'Evidence · Corrections',roles:['reviewer','platform_admin'],
+    links:[
+      {label:'Review Queue',to:'/review',icon:FileSearch,end:true},
+      {label:'Decision Analysis',to:'/research',icon:Activity},
+    ],
+  },
+  research: {
+    title:'CEDAR Research',tagline:'Explainability · Stability',roles:['reviewer','borrower','platform_admin'],
+    links:[
+      {label:'Research Dashboard',to:'/research',icon:LayoutDashboard,end:true},
+      {label:'My Workspace',to:'/',icon:BookOpen},
+    ],
+  },
+};
+
+function Protected({ allow }: { allow: Role[] }) {
+  const { identity, loading } = useSession();
+  const location = useLocation();
+  if (loading) return <div className="page-loader">Restoring your secure session…</div>;
+  if (!identity) return <Navigate to="/login" replace state={{from:location.pathname}}/>;
+  if (!allow.includes(identity.role)) return <Navigate to={roleHome(identity.role)} replace/>;
+  return <Outlet/>;
 }
 
-const pages = [
-  { name: 'Overview', path: '/', icon: Activity },
-  { name: 'Operations Workbench', path: '/operations', icon: Layers },
-  { name: 'Borrower Portal', path: '/borrower', icon: Users },
-  { name: 'Lender Portal', path: '/lender', icon: Building2 },
-  { name: 'Platform Admin', path: '/admin', icon: ShieldCheck },
-  { name: 'Human Review', path: '/review', icon: FileSearch },
-  { name: 'Research Engine', path: '/research', icon: GitBranch },
-  { name: 'Architecture', path: '/architecture', icon: Workflow },
-];
-
-function Badge({ status }: { status: 'implemented' | 'planned' | 'mocked' }) {
-  return <span className={`badge badge-${status}`}>{status === 'implemented' ? 'Implemented' : status === 'planned' ? 'Planned' : 'Mocked'}</span>;
+function RoleLanding() {
+  const { identity, loading } = useSession();
+  if (loading) return <div className="page-loader">Loading workspace…</div>;
+  return <Navigate to={identity ? roleHome(identity.role) : '/login'} replace/>;
 }
 
-function Heading({ eyebrow, title, description }: { eyebrow: string; title: string; description: string }) {
-  return <div className="heading"><p className="eyebrow">{eyebrow}</p><h1>{title}</h1><p>{description}</p></div>;
-}
-
-function Notice({ children }: { children: React.ReactNode }) {
-  return <div className="notice"><LockKeyhole size={18} aria-hidden="true" /><div>{children}</div></div>;
-}
-
-function ErrorState({ message }: { message: string }) {
-  return <div className="error" role="alert"><strong>Backend connection unavailable</strong><p>{message}</p><small>Start FastAPI on port 8000 and try refreshing. No demonstration results will be fabricated.</small></div>;
-}
-
-function Overview() {
-  const health = useRemote(api.health);
-  const capabilities = useRemote(api.capabilities);
-  const implemented = capabilities.data?.capabilities.filter(c => c.status === 'implemented').length ?? 0;
-  return <>
-    <Heading eyebrow="RESEARCH PLATFORM · INTEGRATION PHASE" title="A clearer path to responsible agricultural credit" description="CEDAR-Credit connects document evidence, lending rules, and transparent decision workflows. This prototype contains API-backed research workflows and mock loan services. Real financial integrations remain out of scope." />
-    <div className="stats">
-      <div className="stat"><span>Backend API</span><strong className={health.data?.status === 'ok' ? 'healthy' : ''}>{health.loading ? 'Checking…' : health.data?.status === 'ok' ? 'Online' : 'Offline'}</strong><small>Real FastAPI health endpoint</small></div>
-      <div className="stat"><span>Current phase</span><strong>{capabilities.data?.current_phase ?? '—'} / 10</strong><small>Incremental research build</small></div>
-      <div className="stat"><span>Implemented modules</span><strong>{capabilities.data ? `${implemented} / ${capabilities.data.capabilities.length}` : '—'}</strong><small>From the backend capability catalog</small></div>
-    </div>
-    {health.error && <ErrorState message={health.error} />}
-    <section className="surface"><div className="section-header"><div><h2>Engineering roadmap</h2><p>Live module status from the backend.</p></div><BookOpen size={21} /></div>
-      {capabilities.error ? <ErrorState message={capabilities.error} /> : capabilities.loading ? <p className="muted">Loading module catalog…</p> :
-        <div className="module-grid">{capabilities.data?.capabilities.map((c: Capability) => <article key={c.id} className="module"><div className="module-top"><span className="phase">PHASE {c.phase}</span><Badge status={c.status}/></div><h3>{c.title}</h3><p>{c.description}</p></article>)}</div>}
-    </section>
-    <Notice>This research prototype supports synthetic borrower records and preliminary lender-rule outcomes. No real bank approvals, transfers, KYC, or AI fraud verdicts are offered.</Notice>
-  </>;
-}
-
-function Architecture() {
-  const state = useRemote(api.architecture);
-  return <>
-    <Heading eyebrow="SYSTEM DESIGN · VERSIONED" title="Architecture Explorer" description="Four logical layers of the planned modular monolith. Each layer displays its actual implementation status, retrieved from FastAPI." />
-    {state.error ? <ErrorState message={state.error}/> : state.loading ? <p className="muted">Loading architecture…</p> :
-      <section className="architecture">{state.data?.layers.map((layer: ArchitectureLayer, index: number) => <div key={layer.name} className="architecture-stage">
-        <div className="arch-card"><div className="section-header"><div><span className="phase">LAYER {index+1}</span><h2>{layer.name}</h2></div><Badge status={layer.status}/></div><div className="chips">{layer.modules.map(mod => <span className="chip" key={mod}>{mod}</span>)}</div></div>
-        {index !== (state.data?.layers.length ?? 0)-1 && <div className="arch-link"><ArrowRight size={20} /></div>}
-      </div>)}</section>}
-    <Notice>Architecture documentation reflects intended module boundaries. Planned layers are not connected to operational financial integrations or decision services.</Notice>
-  </>;
-}
-
-function Shell() {
+function PortalLayout({ workspace }: { workspace: keyof typeof workspaces }) {
+  const { identity, logout } = useSession();
   const [open, setOpen] = useState(false);
-  return <div className="layout">
-    <aside className={`sidebar ${open ? 'sidebar-open' : ''}`}>
-      <div className="brand"><div className="brand-icon"><Sprout size={25}/></div><div><strong>CEDAR-Credit</strong><span>Research Marketplace</span></div><button className="mobile-close" onClick={() => setOpen(false)} aria-label="Close navigation"><X size={21}/></button></div>
-      <div className="side-label">WORKSPACE</div>
-      <nav aria-label="Main navigation">{pages.map(p => <NavLink end={p.path === '/'} key={p.path} to={p.path} onClick={() => setOpen(false)} className={({isActive}) => `nav-link ${isActive ? 'active' : ''}`}><p.icon size={18} aria-hidden="true"/><span>{p.name}</span></NavLink>)}</nav>
-      <div className="side-bottom"><div className="side-status"><CheckCircle2 size={17}/> Research prototype · Phase 10</div><span>Synthetic-data research prototype</span></div>
+  const location = useLocation();
+  const config = workspaces[workspace];
+  const extra: NavItem[] = identity?.role === 'platform_admin' && workspace !== 'admin'
+    ? [{label:'Admin Home',to:'/admin',icon:ShieldCheck}] : [];
+  const shortName = identity?.email.split('@')[0] || 'User';
+  return <div className="portal-layout">
+    <aside className={'portal-sidebar ' + (open ? 'is-open' : '')}>
+      <Link to="/" className="portal-brand"><span className="brand-symbol"><Sprout size={25}/></span>
+        <span><strong>CEDAR-Credit</strong><small>Credit Marketplace</small></span>
+      </Link>
+      <div className="portal-workspace-tag"><span>YOUR WORKSPACE</span>
+        <strong>{config.title}</strong><small>{config.tagline}</small>
+      </div>
+      <nav aria-label={config.title + ' navigation'} className="portal-nav">
+        {config.links.concat(extra).map(item => <NavLink key={item.to} end={item.end} to={item.to}
+          onClick={() => setOpen(false)}
+          className={({isActive}) => 'portal-nav-item ' + (isActive ? 'selected' : '')}>
+          <item.icon size={18}/><span>{item.label}</span></NavLink>)}
+      </nav>
+      <div className="portal-sidebar-bottom"><div className="sandbox-chip"><ShieldCheck size={15}/> Research sandbox</div>
+        <p>Synthetic data only. No formal credit approvals or money transfers.</p></div>
     </aside>
-    {open && <button className="overlay" aria-label="Close navigation" onClick={() => setOpen(false)} />}
-    <div className="main-col"><header className="topbar"><button className="mobile-menu" aria-label="Open navigation" onClick={() => setOpen(true)}><Menu size={22}/></button><div className="breadcrumb">CEDAR-Credit <span>/</span> Research Platform</div><div className="topbar-right"><span className="top-chip"><Database size={15}/> API-backed scaffold</span><span className="avatar" aria-label="Demo platform user">C</span></div></header>
-      <main className="content"><Routes><Route path="/" element={<Overview/>}/><Route path="/operations" element={<Workbench/>}/><Route path="/borrower" element={<Workbench/>}/><Route path="/lender" element={<Workbench/>}/><Route path="/admin" element={<Workbench/>}/><Route path="/review" element={<Workbench/>}/><Route path="/research" element={<Workbench/>}/><Route path="/architecture" element={<Architecture/>}/><Route path="*" element={<div className="surface"><h1>Page not found</h1><NavLink className="text-link" to="/">Return to overview</NavLink></div>}/></Routes></main>
-      <footer className="footer">CEDAR-Credit · Research prototype · Not a banking or lending service</footer>
+    {open && <button type="button" className="portal-backdrop"
+      onClick={() => setOpen(false)} aria-label="Close navigation"/>}
+    <div className="portal-body">
+      <header className="portal-topbar">
+        <button className="menu-toggle" onClick={() => setOpen(!open)} aria-label="Toggle navigation">
+          {open ? <X size={22}/> : <Menu size={22}/>}</button>
+        <div className="portal-topbar-title"><span>CEDAR-Credit</span><span className="slash">/</span>
+          <strong>{config.title}</strong></div>
+        <div className="portal-topbar-user"><div className="user-badge">{shortName[0]?.toUpperCase() || 'U'}</div>
+          <span><strong>{shortName}</strong><small>{identity?.role.replaceAll('_',' ')}</small></span>
+          <ChevronDown size={15}/>
+          <button className="signout" title="Sign out" aria-label="Sign out"
+            onClick={() => { void logout(); }}><LogOut size={18}/></button>
+        </div>
+      </header>
+      <main className="portal-content" key={location.pathname}><Outlet/></main>
+      <footer className="portal-footer">CEDAR-Credit · Student research prototype · No live lender integrations</footer>
     </div>
   </div>;
 }
 
-export default Shell;
+export default function App() {
+  return <Routes>
+    <Route path="/" element={<RoleLanding/>}/>
+    <Route path="/login" element={<AuthPage mode="login"/>}/>
+    <Route path="/register" element={<AuthPage mode="register"/>}/>
+
+    <Route element={<Protected allow={workspaces.borrower.roles}/>}>
+      <Route element={<PortalLayout workspace="borrower"/>}>
+        <Route path="/borrower" element={<BorrowerDashboard/>}/>
+        <Route path="/borrower/applications" element={<BorrowerApplications/>}/>
+        <Route path="/borrower/apply" element={<ApplyLoan/>}/>
+        <Route path="/borrower/applications/:id" element={<BorrowerApplicationDetail/>}/>
+        <Route path="/borrower/loans" element={<BorrowerLoans/>}/>
+        <Route path="/borrower/loans/:id" element={<LoanDetail/>}/>
+      </Route>
+    </Route>
+    <Route element={<Protected allow={workspaces.lender.roles}/>}>
+      <Route element={<PortalLayout workspace="lender"/>}>
+        <Route path="/lender" element={<LenderDashboard/>}/>
+        <Route path="/lender/products" element={<LenderProducts/>}/>
+        <Route path="/lender/policies" element={<LenderPolicies/>}/>
+      </Route>
+    </Route>
+    <Route element={<Protected allow={workspaces.admin.roles}/>}>
+      <Route element={<PortalLayout workspace="admin"/>}>
+        <Route path="/admin" element={<AdminDashboard/>}/>
+        <Route path="/admin/lenders" element={<AdminLenders/>}/>
+        <Route path="/admin/applications" element={<AdminApplications/>}/>
+        <Route path="/admin/applications/:id" element={<AdminApplicationDetail/>}/>
+        <Route path="/admin/loans" element={<AdminLoans/>}/>
+        <Route path="/developer" element={<Workbench/>}/>
+      </Route>
+    </Route>
+    <Route element={<Protected allow={workspaces.review.roles}/>}>
+      <Route element={<PortalLayout workspace="review"/>}>
+        <Route path="/review" element={<ReviewerDashboard/>}/>
+        <Route path="/review/tasks/:id" element={<ReviewTaskDetail/>}/>
+      </Route>
+    </Route>
+    <Route element={<Protected allow={workspaces.research.roles}/>}>
+      <Route element={<PortalLayout workspace="research"/>}>
+        <Route path="/research" element={<ResearchDashboard/>}/>
+        <Route path="/research/applications/:id" element={<ResearchApplication/>}/>
+      </Route>
+    </Route>
+
+    <Route path="/operations" element={<RoleLanding/>}/>
+    <Route path="*" element={<div className="missing-page"><h1>Page not found</h1><Link to="/">Return to your workspace</Link></div>}/>
+  </Routes>;
+}
