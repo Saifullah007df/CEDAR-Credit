@@ -21,7 +21,7 @@
 | 9 | RG-04: end-use evidence links and manual utilization review | Mock-only, no automatic fraud conclusion |
 | 10 | Unit/integration tests, CI, seed script, API/architecture docs | Automated checks provided |
 
-A **single React Operations Workbench** is accessible from the project sidebar and from each module's route. It calls real authenticated FastAPI endpoints, not hardcoded eligibility screens. API details are at `/docs` on the backend.
+**Redesigned role-based portals** are now the primary interface: Borrower, Lender, Platform Admin, Human Reviewer and CEDAR Research each have separate routes and workflows. The original API workbench remains available only to platform admins at `/developer`. Browser sessions survive refresh via HttpOnly cookies and CSRF checks. [Portal guide](docs/role-based-ui.md). API documentation remains available at `/docs` on the backend.
 
 ## Quick start (Linux / Fedora)
 
@@ -59,7 +59,7 @@ npm install
 npm run dev
 ```
 
-Open **http://localhost:5173/operations**. For PostgreSQL/Docker instructions, see [docs/local-run.md](docs/local-run.md). The example admin account must be created using the CLI; borrower accounts can register in the workbench.
+Open **http://localhost:5173/**. Signed-in users are directed to their role-specific dashboards. For PostgreSQL/Docker instructions, see [docs/local-run.md](docs/local-run.md). The example admin account must be created using the CLI; borrowers can register on `/register`.
 
 ## Synthetic turnover demonstration
 
@@ -75,7 +75,7 @@ Note that **counterfactual stability only quantifies over provided candidate val
 
 ## Tests and safety
 
-The CI workflows run TypeScript checking, a Vite production build, PostgreSQL migrations, synthetic seeding, and Python unit/integration tests. Green checks verify source/build/test behavior, **not** bank-grade security, OCR accuracy or production readiness.
+The CI workflows run role-based frontend navigation tests, TypeScript checking, a Vite production build, PostgreSQL migrations, synthetic seeding, and Python unit/integration tests. Green checks verify source/build/test behavior, **not** bank-grade security, OCR accuracy or production readiness.
 
 No private credentials, actual borrower documents, or payment information should be committed. Keep any `.env` file, virtual environments, uploads and local databases outside version control.
 

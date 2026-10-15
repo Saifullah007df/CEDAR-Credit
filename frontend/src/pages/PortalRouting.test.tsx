@@ -64,7 +64,7 @@ describe('role-separated portal routing', () => {
     const nav = screen.getByRole('navigation', { name: 'Platform Admin navigation' });
     expect(nav.textContent).toContain('Manage Lenders');
     expect(nav.textContent).toContain('Applications');
-    expect(nav.textContent).toContain('Human Review' === 'Review Queue' ? 'Human Review' : 'Review Queue');
+    expect(nav.textContent).toContain('Review Queue');
   });
 
   it('redirects unauthorized borrower visits to their own portal', async () => {
