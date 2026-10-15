@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { NavLink, Route, Routes } from 'react-router-dom';
 import { Activity, ArrowRight, BookOpen, Building2, CheckCircle2, Database, FileSearch, GitBranch, Layers, LockKeyhole, Menu, ShieldCheck, Sprout, Users, Workflow, X } from 'lucide-react';
+import Workbench from './Workbench';
 import { api, type ArchitectureLayer, type Capability } from './lib/api';
 
 type LoadState<T> = { data: T | null; error: string | null; loading: boolean };
@@ -22,6 +23,7 @@ function useRemote<T>(load: (signal: AbortSignal) => Promise<T>): LoadState<T> {
 
 const pages = [
   { name: 'Overview', path: '/', icon: Activity },
+  { name: 'Operations Workbench', path: '/operations', icon: Layers },
   { name: 'Borrower Portal', path: '/borrower', icon: Users },
   { name: 'Lender Portal', path: '/lender', icon: Building2 },
   { name: 'Platform Admin', path: '/admin', icon: ShieldCheck },
@@ -80,7 +82,7 @@ function Planned({ id }: { id: keyof typeof plannedPages }) {
     <Heading eyebrow={`${content.phase} · PLANNED`} title={content.title} description={content.description} />
     <section className="surface"><div className="section-header"><h2>Planned capabilities</h2><Badge status="planned" /></div><div className="future-grid">{content.items.map(item => <div className="future-item" key={item}><Layers size={18} aria-hidden="true"/><span>{item}</span></div>)}</div></section>
     <Notice>Not implemented in Phase 1. Controls for live applications or credit decisions are intentionally unavailable until database, authorization, and corresponding services are tested.</Notice>
-    <NavLink className="text-link" to="/">View implementation status <ArrowRight size={16}/></NavLink>
+    <NavLink className="text-link" to="/operations">Try the functional API workbench <ArrowRight size={16}/></NavLink>
   </>;
 }
 
@@ -108,7 +110,7 @@ function Shell() {
     </aside>
     {open && <button className="overlay" aria-label="Close navigation" onClick={() => setOpen(false)} />}
     <div className="main-col"><header className="topbar"><button className="mobile-menu" aria-label="Open navigation" onClick={() => setOpen(true)}><Menu size={22}/></button><div className="breadcrumb">CEDAR-Credit <span>/</span> Research Platform</div><div className="topbar-right"><span className="top-chip"><Database size={15}/> API-backed scaffold</span><span className="avatar" aria-label="Demo platform user">C</span></div></header>
-      <main className="content"><Routes><Route path="/" element={<Overview/>}/><Route path="/borrower" element={<Planned id="borrower"/>}/><Route path="/lender" element={<Planned id="lender"/>}/><Route path="/admin" element={<Planned id="admin"/>}/><Route path="/review" element={<Planned id="review"/>}/><Route path="/research" element={<Planned id="research"/>}/><Route path="/architecture" element={<Architecture/>}/><Route path="*" element={<div className="surface"><h1>Page not found</h1><NavLink className="text-link" to="/">Return to overview</NavLink></div>}/></Routes></main>
+      <main className="content"><Routes><Route path="/" element={<Overview/>}/><Route path="/operations" element={<Workbench/>}/><Route path="/borrower" element={<Planned id="borrower"/>}/><Route path="/lender" element={<Planned id="lender"/>}/><Route path="/admin" element={<Planned id="admin"/>}/><Route path="/review" element={<Planned id="review"/>}/><Route path="/research" element={<Planned id="research"/>}/><Route path="/architecture" element={<Architecture/>}/><Route path="*" element={<div className="surface"><h1>Page not found</h1><NavLink className="text-link" to="/">Return to overview</NavLink></div>}/></Routes></main>
       <footer className="footer">CEDAR-Credit · Research prototype · Not a banking or lending service</footer>
     </div>
   </div>;
