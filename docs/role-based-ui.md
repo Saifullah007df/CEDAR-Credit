@@ -10,7 +10,7 @@ authorization remains the authoritative enforcement point.
 | --- | --- | --- |
 | Borrower | /borrower | /borrower/apply; /borrower/applications; /borrower/applications/:id (Overview / Documents / Evidence / Decisions / Offers); /borrower/loans; /borrower/loans/:id |
 | Lender admin | /lender | /lender/products; /lender/policies |
-| Platform admin | /admin | /admin/lenders; /admin/products; /admin/policies; /admin/users; /admin/applications; /admin/applications/:id; /admin/loans; /developer |
+| Platform admin | /admin | /admin/lenders; /admin/products; /admin/policies; /admin/users; /admin/applications; /admin/applications/:id; /admin/loans; /admin/loans/:id; /developer |
 | Reviewer | /review | /review/tasks/:id |
 | Research (authorized roles) | /research | /research/applications/:id |
 
@@ -66,7 +66,7 @@ From a VS Code terminal:
     git pull origin main
 
 If git reports local uncommitted edits, review them before pulling; don't run
-a destructive reset. Keep \`backend/.env\` and \`backend/cedar_credit.db\` intact.
+a destructive reset. Keep `backend/.env` and `backend/cedar_credit.db` intact.
 The SQLite database and .env are ignored by Git; they should not be deleted.
 
 Backend (Terminal 1):
@@ -86,5 +86,5 @@ Frontend (Terminal 2):
 Then open http://localhost:5173/. The app redirects to /login (signed out)
 or the dashboard matching the current authenticated role.
 
-For regression tests run \`cd backend && python -m pytest -q\` and
-\`cd frontend && npm run test && npm run typecheck && npm run build\`.
+For regression tests run `cd backend && python -m pytest -q` and
+`cd frontend && npm run test && npm run typecheck && npm run build`.

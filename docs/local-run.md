@@ -56,8 +56,7 @@ npm install
 npm run dev
 ```
 
-Open http://localhost:5173/operations. Sign in with the administrator you
-created, or register a separate borrower account via the workbench.
+Open http://localhost:5173/. The interface redirects to the sign-in screen or your role-specific dashboard. Sign in with the administrator you created, or register a separate borrower account at /register.
 
 ## Demonstrate CEDAR
 
@@ -71,9 +70,7 @@ created, or register a separate borrower account via the workbench.
 8. Borrower accepts mock offer; admin records mock disbursement and payment.
 9. Borrower adds an end-use claim linked to supporting evidence where available.
 
-Use the browser workbench to submit all API calls or explore http://localhost:8000/docs.
-If you change accounts, sign out and sign back in; browser tokens are stored in
-memory only, not localStorage.
+Use the separate Borrower, Admin, Reviewer and CEDAR Research pages for the workflow, or explore http://localhost:8000/docs. The legacy low-level developer console is restricted to platform admins at /developer. Browser authentication uses a server-issued HttpOnly, SameSite=Strict cookie and an X-CSRF-Token header for writes, so sessions persist across refreshes. Sign out to switch accounts.
 
 ## Caveats
 

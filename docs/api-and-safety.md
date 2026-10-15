@@ -3,8 +3,12 @@
 ## Authentication
 `POST /api/v1/auth/register` creates borrower accounts only. Administrators
 are created through the CLI. `POST /api/v1/auth/login` returns an 8-hour JWT.
-`GET /api/v1/auth/me` requires an active bearer token. Tokens are held in
-frontend memory only and lost on refresh.
+`GET /api/v1/auth/me` accepts a bearer token or a browser session cookie.
+The browser uses an HttpOnly SameSite=Strict cookie, with Secure enabled in
+production, and obtains a CSRF token via /me for modifying requests. The cookie
+persists across page refreshes (8-hour token expiration). The existing bearer
+API remains supported. Neither JWTs nor login passwords are stored in browser
+localStorage or sessionStorage.
 
 ## Market lifecycle
 `/api/v1/admin/lenders`, `/api/v1/admin/lenders/{id}/products`, and
