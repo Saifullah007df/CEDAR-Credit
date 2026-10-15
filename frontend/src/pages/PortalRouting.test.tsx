@@ -67,6 +67,22 @@ describe('role-separated portal routing', () => {
     expect(nav.textContent).toContain('Review Queue');
   });
 
+
+  it.each([
+    ['/admin/lenders', 'Lending institutions'],
+    ['/admin/products', 'Loan products'],
+    ['/admin/policies', 'Lending rules and policies'],
+    ['/admin/users', 'User access and roles'],
+  ])('renders dedicated admin screen %s', async (route, heading) => {
+    auth.role = 'platform_admin';
+    startAt(route);
+    expect(await screen.findByRole('heading', { name: heading, level: 1 })).toBeTruthy();
+    const nav = screen.getByRole('navigation', { name: 'Platform Admin navigation' });
+    expect(nav.textContent).toContain('Loan Products');
+    expect(nav.textContent).toContain('Lending Policies');
+    expect(nav.textContent).toContain('Users & Roles');
+  });
+
   it('redirects unauthorized borrower visits to their own portal', async () => {
     startAt('/admin');
     expect((await screen.findByRole('navigation', {
