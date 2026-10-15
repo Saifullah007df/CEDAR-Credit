@@ -10,7 +10,7 @@ authorization remains the authoritative enforcement point.
 | --- | --- | --- |
 | Borrower | /borrower | /borrower/apply; /borrower/applications; /borrower/applications/:id (Overview / Documents / Evidence / Decisions / Offers); /borrower/loans; /borrower/loans/:id |
 | Lender admin | /lender | /lender/products; /lender/policies |
-| Platform admin | /admin | /admin/lenders; /admin/applications; /admin/applications/:id; /admin/loans; /developer |
+| Platform admin | /admin | /admin/lenders; /admin/products; /admin/policies; /admin/users; /admin/applications; /admin/applications/:id; /admin/loans; /developer |
 | Reviewer | /review | /review/tasks/:id |
 | Research (authorized roles) | /research | /research/applications/:id |
 

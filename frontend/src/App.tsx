@@ -1,14 +1,15 @@
 import { useState } from 'react';
 import { Activity, BookOpen, Building2, ChevronDown, ClipboardList, CreditCard,
   FileCheck2, FileSearch, FlaskConical, GitBranch, Landmark, LayoutDashboard,
-  ListChecks, LogOut, Menu, ShieldCheck, Sprout, Wallet, X } from 'lucide-react';
+  ListChecks, LogOut, Menu, ShieldCheck, Sprout, Users, Wallet, X } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { Link, Navigate, NavLink, Outlet, Route, Routes, useLocation } from 'react-router-dom';
 import Workbench from './Workbench';
 import { useSession, type Role } from './lib/session';
 import { AuthPage, roleHome } from './pages/AuthPages';
 import { BorrowerDashboard, BorrowerApplications, ApplyLoan, BorrowerApplicationDetail, BorrowerLoans, LoanDetail } from './pages/BorrowerPages';
-import { AdminDashboard, AdminLenders, AdminApplications, AdminApplicationDetail, AdminLoans } from './pages/AdminPages';
+import { AdminDashboard, AdminApplications, AdminApplicationDetail, AdminLoans } from './pages/AdminPages';
+import { ManageLenders, ManageProducts, ManagePolicies, ManageUsers } from './pages/AdminManagePages';
 import { LenderDashboard, LenderProducts, LenderPolicies } from './pages/LenderPages';
 import { ReviewerDashboard, ReviewTaskDetail } from './pages/ReviewPages';
 import { ResearchDashboard, ResearchApplication } from './pages/ResearchPages';
@@ -40,6 +41,9 @@ const workspaces: Record<string, Workspace> = {
     links:[
       {label:'Dashboard',to:'/admin',icon:LayoutDashboard,end:true},
       {label:'Manage Lenders',to:'/admin/lenders',icon:Building2},
+      {label:'Loan Products',to:'/admin/products',icon:Landmark},
+      {label:'Lending Policies',to:'/admin/policies',icon:ListChecks},
+      {label:'Users & Roles',to:'/admin/users',icon:Users},
       {label:'Applications',to:'/admin/applications',icon:ClipboardList},
       {label:'Mock Loan Servicing',to:'/admin/loans',icon:Wallet},
       {label:'Review Queue',to:'/review',icon:FileCheck2},
@@ -150,7 +154,10 @@ export default function App() {
     <Route element={<Protected allow={workspaces.admin.roles}/>}>
       <Route element={<PortalLayout workspace="admin"/>}>
         <Route path="/admin" element={<AdminDashboard/>}/>
-        <Route path="/admin/lenders" element={<AdminLenders/>}/>
+        <Route path="/admin/lenders" element={<ManageLenders/>}/>
+        <Route path="/admin/products" element={<ManageProducts/>}/>
+        <Route path="/admin/policies" element={<ManagePolicies/>}/>
+        <Route path="/admin/users" element={<ManageUsers/>}/>
         <Route path="/admin/applications" element={<AdminApplications/>}/>
         <Route path="/admin/applications/:id" element={<AdminApplicationDetail/>}/>
         <Route path="/admin/loans" element={<AdminLoans/>}/>
