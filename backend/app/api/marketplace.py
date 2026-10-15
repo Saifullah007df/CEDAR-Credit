@@ -18,7 +18,7 @@ from sqlalchemy.orm import Session
 from app.core.config import get_settings
 from app.db import get_db
 from app.models import (
-    Application, Borrower, DependencyEdge, Document, EvidenceFact, EvidenceRevision,
+    Application, Borrower, DependencyEdge, Document, DocumentExtraction, EvidenceFact, EvidenceRevision,
     Evaluation, Lender, Loan, LoanOffer, LoanProduct, Policy, PolicyRule, Repayment,
     ReviewTask, RuleResult, User, UtilizationClaim, UtilizationLink,
 )
@@ -585,3 +585,44 @@ def utilization_list(loan_id: int, db: Session = Depends(get_db), user: User = D
              "status": c.status, "links": [{"document_id": l.document_id, "annotation": l.annotation}
              for l in db.scalars(select(UtilizationLink).where(UtilizationLink.claim_id == c.id)).all()]}
             for c in claims]
+
+@router.post("/applications/{app_id}/documents/{document_id}/extract")
+def extract_document(app_id: int, document_id: int, language: str = "eng",
+                     db: Session = Depends(get_db), user: User = Depends(roles("borrower", "platform_admin", "reviewer"))):
+    """Local OCR is optional; suggestions remain unverified and never auto-used in the BRE."""
+    from app.document_extraction import extract_text
+    authorized_app(db, app_id, user)
+    doc = db.get(Document, document_id)
+    if doc is None or doc.application_id != app_id:
+        raise HTTPException(404, "Document not found")
+    path = Path(get_settings().storage_dir) / doc.storage_key
+    if not path.is_file():
+        raise HTTPException(404, "Private document file missing")
+    try:
+        extracted = extract_text(path, doc.mime_type, language)
+    except ValueError as exc:
+        raise HTTPException(422, str(exc))
+    except RuntimeError as exc:
+        raise HTTPException(503, str(exc))
+    row = DocumentExtraction(document_id=doc.id, engine=extracted["engine"],
+                             language=extracted["language"], status=extracted["status"],
+                             text=extracted["text"], candidates=extracted["candidates"],
+                             verified=False)
+    db.add(row)
+    db.flush()
+    audit(db, user, "document.extract_unverified", "document_extraction", row.id,
+          engine=extracted["engine"], doc_id=doc.id)
+    db.commit()
+    return {"extraction_id": row.id, **extracted}
+
+@router.get("/applications/{app_id}/documents/{document_id}/extractions")
+def list_extractions(app_id: int, document_id: int, db: Session = Depends(get_db),
+                     user: User = Depends(current_user)):
+    authorized_app(db, app_id, user)
+    doc = db.get(Document, document_id)
+    if doc is None or doc.application_id != app_id:
+        raise HTTPException(404, "Document not found")
+    rows = db.scalars(select(DocumentExtraction).where(DocumentExtraction.document_id == document_id)
+                      .order_by(DocumentExtraction.id.desc())).all()
+    return [{"id": r.id, "engine": r.engine, "language": r.language, "status": r.status,
+             "text": r.text, "candidates": r.candidates, "verified": False} for r in rows]

@@ -194,3 +194,15 @@ class AuditEvent(Base):
     object_id: Mapped[int] = mapped_column(Integer)
     data: Mapped[dict] = mapped_column(JSON, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+
+class DocumentExtraction(Base):
+    __tablename__ = "document_extractions"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    document_id: Mapped[int] = mapped_column(ForeignKey("documents.id"), index=True)
+    engine: Mapped[str] = mapped_column(String(60))
+    language: Mapped[str] = mapped_column(String(35))
+    status: Mapped[str] = mapped_column(String(40))
+    text: Mapped[str] = mapped_column(Text)
+    candidates: Mapped[dict] = mapped_column(JSON, default=dict)
+    verified: Mapped[bool] = mapped_column(Boolean, default=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)

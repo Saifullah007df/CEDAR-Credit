@@ -21,6 +21,7 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = ["pytest>=8,<10", "httpx>=0.27,<1.0", "ruff>=0.6,<1.0"]
+ocr = ["pypdf>=5,<7", "pillow>=11,<13", "pytesseract>=0.3.13,<1.0"]
 
 [tool.setuptools.packages.find]
 where = ["."]
