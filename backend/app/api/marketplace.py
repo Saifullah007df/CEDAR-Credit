@@ -680,3 +680,35 @@ def review_utilization(claim_id: int, db: Session = Depends(get_db),
     db.commit()
     return {"claim_id": claim.id, "status": claim.status, "fraud_determination": None,
             "warning": "Evidence linkage is not proof of proper use or a fraud verdict."}
+
+
+@router.get("/loans")
+def list_loans(db: Session = Depends(get_db), user: User = Depends(
+    roles("borrower", "platform_admin")
+)):
+    """Return demo loans only to their borrower owner or platform administrator."""
+    stmt = (
+        select(Loan, LoanOffer)
+        .join(LoanOffer, Loan.offer_id == LoanOffer.id)
+        .join(Application, LoanOffer.application_id == Application.id)
+        .order_by(Loan.id.desc())
+    )
+    if user.role == "borrower":
+        stmt = stmt.where(Application.borrower_id == borrower_for(db, user).id)
+    result = db.execute(stmt).all()
+    return [
+        {"id": loan.id, "offer_id": offer.id, "application_id": offer.application_id,
+         "status": loan.status, "amount": offer.amount, "apr": offer.apr,
+         "lender_id": offer.lender_id, "disbursed_at": loan.disbursed_at}
+        for loan, offer in result
+    ]
+
+
+@router.get("/loans/{loan_id}")
+def loan_details(loan_id: int, db: Session = Depends(get_db),
+                 user: User = Depends(roles("borrower", "platform_admin"))):
+    loan, offer = authorized_loan(db, loan_id, user)
+    return {"id": loan.id, "offer_id": offer.id,
+            "application_id": offer.application_id, "status": loan.status,
+            "amount": offer.amount, "apr": offer.apr,
+            "lender_id": offer.lender_id, "disbursed_at": loan.disbursed_at}
