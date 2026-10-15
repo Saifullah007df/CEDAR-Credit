@@ -16,12 +16,12 @@ def health() -> HealthResponse:
 @router.get("/capabilities", response_model=CapabilitiesResponse)
 def capabilities() -> CapabilitiesResponse:
     return CapabilitiesResponse(
-        project="CEDAR-Credit", current_phase=1, capabilities=list(CAPABILITIES)
+        project="CEDAR-Credit", current_phase=10, capabilities=list(CAPABILITIES)
     )
 
 
 @router.get("/architecture", response_model=ArchitectureResponse)
 def architecture() -> ArchitectureResponse:
     return ArchitectureResponse(
-        version="phase-1", architecture="modular monolith", layers=list(ARCHITECTURE_LAYERS)
+        version="research-prototype-10", architecture="modular monolith", layers=list(ARCHITECTURE_LAYERS)
     )

@@ -98,12 +98,16 @@ def test_workflow_and_incremental_recompute(env):
     loan = post(c, f"/api/v1/offers/{offer['id']}/accept", {}, user)
     disb = post(c, f"/api/v1/loans/{loan['loan_id']}/mock-disburse", {}, admin)
     assert disb["money_transferred"] is False
+    schedule = c.get(f"/api/v1/loans/{loan['loan_id']}/schedule", headers=user).json()
+    assert len(schedule["installments"]) == 12
     payment = post(c, f"/api/v1/loans/{loan['loan_id']}/mock-repayments", {"amount": 10000}, admin)
     assert payment["money_moved"] is False
     util = post(c, f"/api/v1/loans/{loan['loan_id']}/utilization",
                 {"category": "seeds", "amount": 12000, "note": "Demo invoice pending"}, user)
     assert util["fraud_determination"] is None
     assert c.get(f"/api/v1/loans/{loan['loan_id']}/utilization", headers=user).status_code == 200
+    assert c.post(f"/api/v1/admin/utilization/{util['claim_id']}/review",
+                  headers=admin, json={}).status_code == 409
 
 def test_anonymous_and_borrower_separation(env):
     c = env

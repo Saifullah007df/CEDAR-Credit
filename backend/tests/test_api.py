@@ -21,10 +21,10 @@ def test_capabilities_distinguish_implemented_from_planned():
     response = client.get("/api/v1/capabilities")
     assert response.status_code == 200
     body = response.json()
-    assert body["current_phase"] == 1
+    assert body["current_phase"] == 10
     assert len(body["capabilities"]) == 10
-    assert [c["status"] for c in body["capabilities"]].count("implemented") == 1
-    assert [c["status"] for c in body["capabilities"]].count("planned") == 9
+    assert [c["status"] for c in body["capabilities"]].count("implemented") == 7
+    assert [c["status"] for c in body["capabilities"]].count("mocked") == 3
     assert body["capabilities"][0]["id"] == "foundation"
     assert body["capabilities"][3]["id"] == "rg03"
 
@@ -35,7 +35,7 @@ def test_architecture_declares_planned_services():
     body = response.json()
     assert body["architecture"] == "modular monolith"
     assert len(body["layers"]) == 4
-    assert body["layers"][2]["status"] == "planned"
+    assert body["layers"][2]["status"] == "mocked"
     assert "Counterfactual Analyzer" in body["layers"][2]["modules"]
 
 
