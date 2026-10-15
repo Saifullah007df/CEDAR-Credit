@@ -1,50 +1,108 @@
-import { createContext, useContext, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 
-type Identity = { email: string; role: string; lender_id: number | null; id: number };
-type Session = {
-  token: string | null;
-  identity: Identity | null;
-  login: (email: string, password: string) => Promise<void>;
-  logout: () => void;
-  request: <T=unknown>(method: string, path: string, body?: unknown, multipart?: boolean) => Promise<T>;
+export type Role = 'borrower' | 'lender_admin' | 'platform_admin' | 'reviewer';
+export type Identity = {
+  id: number;
+  email: string;
+  role: Role;
+  lender_id: number | null;
+  csrf_token: string;
 };
-const Context = createContext<Session | null>(null);
 
-async function apiRequest<T>(method: string, path: string, token?: string | null, body?: unknown, multipart = false): Promise<T> {
+export class ApiError extends Error {
+  constructor(public status: number, message: string) {
+    super(message);
+    this.name = 'ApiError';
+  }
+}
+
+async function call<T>(
+  method: string, path: string, body?: unknown, csrf?: string | null,
+): Promise<T> {
+  const isForm = body instanceof FormData;
   const response = await fetch(path, {
     method,
+    credentials: 'same-origin',
     headers: {
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...(body !== undefined && !multipart ? { 'Content-Type': 'application/json' } : {}),
+      Accept: 'application/json',
+      ...(body !== undefined && !isForm ? { 'Content-Type': 'application/json' } : {}),
+      ...(csrf && method !== 'GET' ? { 'X-CSRF-Token': csrf } : {}),
     },
-    body: body === undefined ? undefined : multipart ? body as FormData : JSON.stringify(body),
+    body: body === undefined ? undefined : isForm ? body : JSON.stringify(body),
   });
-  const data = await response.json().catch(() => ({}));
+  const data: unknown = await response.json().catch(() => ({}));
   if (!response.ok) {
-    const detail = typeof data.detail === 'string' ? data.detail : JSON.stringify(data.detail ?? data);
-    throw new Error(`${response.status}: ${detail}`);
+    const detail = data && typeof data === 'object' && 'detail' in data
+      ? (data as { detail: unknown }).detail : data;
+    const message = typeof detail === 'string' ? detail : JSON.stringify(detail);
+    throw new ApiError(response.status, message || 'Request failed');
   }
   return data as T;
 }
 
+type SessionContextValue = {
+  identity: Identity | null;
+  loading: boolean;
+  login: (email: string, password: string) => Promise<void>;
+  register: (email: string, password: string, legalName: string, borrowerType: string) => Promise<void>;
+  logout: () => Promise<void>;
+  request: <T = unknown>(method: string, path: string, body?: unknown) => Promise<T>;
+};
+
+const SessionContext = createContext<SessionContextValue | null>(null);
+
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [token, setToken] = useState<string | null>(null);
   const [identity, setIdentity] = useState<Identity | null>(null);
-  async function login(email: string, password: string) {
-    const result = await apiRequest<{ access_token: string }>('POST', '/api/v1/auth/login', null, { email, password });
-    const me = await apiRequest<Identity>('GET', '/api/v1/auth/me', result.access_token);
-    setToken(result.access_token);
-    setIdentity(me);
-  }
-  function logout() { setToken(null); setIdentity(null); }
-  async function request<T=unknown>(method: string, path: string, body?: unknown, multipart = false): Promise<T> {
-    return apiRequest<T>(method, path, token, body, multipart);
-  }
-  return <Context.Provider value={{ token, identity, login, logout, request }}>{children}</Context.Provider>;
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let live = true;
+    call<Identity>('GET', '/api/v1/auth/me')
+      .then(user => { if (live) setIdentity(user); })
+      .catch(() => { if (live) setIdentity(null); })
+      .finally(() => { if (live) setLoading(false); });
+    return () => { live = false; };
+  }, []);
+
+  const login = useCallback(async (email: string, password: string) => {
+    await call('POST', '/api/v1/auth/login', { email, password });
+    const user = await call<Identity>('GET', '/api/v1/auth/me');
+    setIdentity(user);
+  }, []);
+
+  const register = useCallback(async (email: string, password: string, legalName: string, borrowerType: string) => {
+    await call('POST', '/api/v1/auth/register', {
+      email, password, legal_name: legalName, borrower_type: borrowerType,
+    });
+    await login(email, password);
+  }, [login]);
+
+  const logout = useCallback(async () => {
+    try {
+      await call('POST', '/api/v1/auth/logout');
+    } finally {
+      setIdentity(null);
+    }
+  }, []);
+
+  const request = useCallback(async <T,>(method: string, path: string, body?: unknown): Promise<T> => {
+    try {
+      return await call<T>(method, path, body, identity?.csrf_token);
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 401) setIdentity(null);
+      throw error;
+    }
+  }, [identity?.csrf_token]);
+
+  const value = useMemo(() => ({ identity, loading, login, register, logout, request }),
+    [identity, loading, login, register, logout, request]);
+
+  return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;
 }
-export function useSession() {
-  const context = useContext(Context);
-  if (!context) throw new Error('Authentication context unavailable');
-  return context;
+
+export function useSession(): SessionContextValue {
+  const session = useContext(SessionContext);
+  if (!session) throw new Error('Session context is missing');
+  return session;
 }
