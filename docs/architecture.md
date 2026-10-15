@@ -1,62 +1,60 @@
-# CEDAR-Credit architecture and phase boundaries
+# CEDAR-Credit architecture — integrated prototype
 
-## Phase 1: implemented
+## Runtime
 
-```text
-React + TypeScript + React Router
-       | /api/v1 GET
-       v
-Vite development proxy -----> FastAPI
-                                |-- health
-                                |-- capabilities
-                                +-- architecture
+```
+React/TypeScript/Vite  →  FastAPI modular monolith
+         |                       |
+         |                 JWT authentication
+         |                       |
+         |  ┌────────────────────┴─────────────────────┐
+         |  | Borrowers, lender products, applications |
+         |  | Docs & RG-02 versioned evidence registry |
+         |  | RG-03 policies and executable predicates |
+         |  | Evidence-to-rule dependency edge table   |
+         |  | Bounded counterfactual stability checks  |
+         |  | RG-09 prioritized human review           |
+         |  | New evidence revision + targeted rules   |
+         |  | Immutable prior evaluation snapshots     |
+         |  | Mock offers/payments/amortization         |
+         |  | RG-04 purpose-evidence claim links        |
+         |  └────────────────────┬─────────────────────┘
+         |                       |
+         └────────────── PostgreSQL / SQLAlchemy
+                                 |
+                       Alembic schema migrations
 ```
 
-The `capabilities` and `architecture` endpoints are the single source of truth for planned/implemented module status in the UI. No lending results are generated.
+All application operations require server-side authorization. The front-end holds the bearer token in React memory; it does not persist to localStorage. Lender administrators do not receive access to raw borrower applications pending a consent-sharing model.
 
-## Planned modular monolith
+## Domain invariants
 
-```text
-Borrower Portal / Lender Portal / Admin / Reviewer
-       |
-Authentication, Consent & Role Enforcement (Phase 2)
-       |
-Loan Application Service (Phase 3)
-       |
-Document Extraction & Evidence Registry (Phase 5, RG-02)
-       |
-Evidence-to-Rule Dependency Graph (Phase 6)
-       |
-Versioned Multi-Lender Business Rules Engine (Phase 4, RG-03)
-       |
-Counterfactual Decision Stability (Phase 6)
-       |
-Adaptive Human Review (Phase 7, RG-09)
-       |
-Evidence Revision & Selective Re-evaluation (Phase 7)
-       |
-Offer & Mock Loan Lifecycle (Phase 8)
-       |
-Purpose-Evidence Monitoring (Phase 9, RG-04)
-```
+1. **Evidence provenance:** files are SHA-256 identified in private local storage, extraction records preserve the engine and language, and evidence revisions preserve previous observations, candidate values and actor IDs.
+2. **Versioned rules:** each lender policy version contains deterministic predicates referencing explicit evidence keys. Publishing a new version does not edit the prior policy's rules.
+3. **No unknown-as-pass:** absent or invalid values yield UNKNOWN. Mandatory failures yield FAIL; only all-passing mandatory rules produce PASS.
+4. **Counterfactual space:** finite candidate worlds (including the current observation) are enumerated with a 128-world cap. Oversized/unsupported spaces return unknown stability rather than 'stable'.
+5. **Review priority:** affected lender decisions and dependency counts influence task ordering. This is a proof-of-concept priority score, **not** an optimized cost-sensitive research scheduler.
+6. **Recalculation:** human verification creates a new immutable evidence revision. Dependent policy evaluations are regenerated, old snapshots remain, and targeted rule result reuse must equal full deterministic evaluation results in the supported scope.
+7. **Finance boundaries:** PASS ≠ lender approval. Offers, agreement text, disbursement, amortization and repayment are simulated; no bank API is called.
+8. **Post-disbursement checks:** utilization claims are attached to optional evidence documents. A manual 'evidence present' review is not a fraud verdict.
 
-The build order intentionally establishes an independent rules engine before connecting evidence dependencies and human review. Phase 6-7 will close the feedback loop.
+## API boundaries
 
-## Implementation constraints
+- Identity: `/api/v1/auth/*`
+- Lenders/policies/products: `/api/v1/admin/lenders/*`, `/api/v1/lenders`, `/api/v1/products`
+- Borrower applications/documents/evidence: `/api/v1/applications/*`
+- Counterfactual and evaluation snapshots: `/api/v1/applications/{id}/counterfactual`, `/evaluations`
+- Reviewer: `/api/v1/review/tasks` and `/api/v1/review/tasks/{task_id}/verify`
+- Mock offers/loan: `/api/v1/offers/*`, `/api/v1/loans/*`
+- Utilization: `/api/v1/loans/{id}/utilization`, `/api/v1/admin/utilization/{claim_id}/review`
 
-- PostgreSQL relational versioned evidence and policy tables, foreign keys, provenance.
-- SQLAlchemy + Alembic migrations, server-side auth and RBAC in Phase 2.
-- Rules must declare dependencies and generate explanations from executed predicates, not language-model guesses.
-- Missing information must remain UNKNOWN; provisional lender eligibility is not formal lender approval.
-- Counterfactual analysis considers only supported evidence candidates and constraints; unsupported cases remain unresolved.
-- Review must preserve history and update decisions; targeted recomputation must agree with full evaluation.
-- Keep post-disbursement utilization checking separate from automatic fraud classification.
+Refer to the FastAPI `/docs` UI for detailed schemas.
 
-## Phase 1 acceptance tests
+## Explicit limits
 
-1. `/api/v1/health` is online and versioned.
-2. `/api/v1/capabilities` identifies exactly the implemented Phase 1 foundation.
-3. `/api/v1/architecture` declares planned components honestly.
-4. React portal routes render and link correctly.
-5. Frontend consumes backend statuses rather than fabricated application counts or credit results.
-6. Unknown API operations return 404 rather than pretending to function.
+- Optional Tesseract OCR requires binary, language packs and OCR dependencies; scanned PDFs are not rasterized. The financial-field suggestion extractor is heuristic and unverified.
+- Evidence dependencies currently map individual evidence keys to rules; the project does not implement arbitrary multi-hop semantic provenance graphs or automatic evidence confidence calibration.
+- Counterfactual enumeration and review priorities do not provide calibrated decision-risk estimates or a globally optimal verification sequence.
+- Simulated financial lifecycle is not legally binding or suitable for real funds.
+- Requires privacy/security assessment, consent management, encryption, malware scanning, rate limiting, comprehensive fairness and integration tests before real-world financial use.
+- Architecture novelty and nonobviousness require a separate documented prior-art study; no patentability assurance is made.

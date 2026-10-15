@@ -1,70 +1,82 @@
-# CEDAR-Credit — Phase 1
+# CEDAR-Credit
 
-**Counterfactual Evidence-Dependency and Adaptive Review for Agricultural Credit**  
-Research prototype for the Samunnati Finance × Isolated Labs × G19A project discussion.
+**Counterfactual Evidence-Dependency and Adaptive Review for Agricultural Credit** — a full-stack **research prototype**, developed for the Samunnati Finance × Isolated Labs × G19A student-project context.
 
-**Current status:** Phase 1 application foundation. No lending decisions, borrower-data storage, authentication, real OCR, or financial transactions are implemented.
+> **Important:** Everything here uses synthetic lenders and mock transactions. The system does **not** approve real credit, transfer money, verify real KYC or establish that its research architecture is patentably novel.
 
-## Technology
-- React 18, TypeScript, Vite, React Router, Lucide icons.
-- Python FastAPI, Pydantic Settings, versioned REST endpoints.
-- Planned Phase 2: PostgreSQL, SQLAlchemy and Alembic migrations. The database is intentionally not connected in Phase 1.
+[Frontend/Backend CI](.github/workflows/) · [Local setup](docs/local-run.md) · [Architecture](docs/architecture.md) · [API and safety](docs/api-and-safety.md)
 
-## Run locally
+## What is implemented
 
-Requires Python 3.11+ and Node 20+.
+| Phase | Component | Status in this prototype |
+|---|---|---|
+| 1 | React, TypeScript, Vite, FastAPI, responsive portals | Functional |
+| 2 | PostgreSQL/SQLAlchemy schema, Alembic migrations, JWT and roles | Functional prototype |
+| 3 | FPO/borrower applications, fictional lenders and loan products | Functional prototype |
+| 4 | RG-03: versioned deterministic multi-lender rules | Functional prototype |
+| 5 | RG-02: versioned evidence, private documents, optional OCR/text extraction | Partial: OCR depends on local Tesseract; human verification mandatory |
+| 6 | Evidence-to-rule edges and bounded counterfactual stability | Functional for supported finite rules and evidence candidates |
+| 7 | RG-09: review priority, verified revisions, targeted recomputation and snapshots | Functional prototype |
+| 8 | Offers, nonbinding agreements, simulated disbursement and amortization | Mock-only, no real financial activity |
+| 9 | RG-04: end-use evidence links and manual utilization review | Mock-only, no automatic fraud conclusion |
+| 10 | Unit/integration tests, CI, seed script, API/architecture docs | Automated checks provided |
 
-**Terminal A — backend**
+A **single React Operations Workbench** is accessible from the project sidebar and from each module's route. It calls real authenticated FastAPI endpoints, not hardcoded eligibility screens. API details are at `/docs` on the backend.
+
+## Quick start (Linux / Fedora)
+
+Requirements: Python 3.11–3.13, Node 20+, PostgreSQL or SQLite. Docker Compose is optional for PostgreSQL.
+
+In two terminals, from the repository root:
+
+**Terminal 1 — API**
+
 ```bash
 cd backend
-python -m venv .venv
-source .venv/bin/activate    # Windows: .venv\\Scripts\\activate
-pip install -e '.[dev]'
-uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install -e '.[dev,ocr]'
+cp .env.example .env
+# In backend/.env, set JWT_SECRET to 48+ random characters.
+# For the simplest local demo, keep DATABASE_URL=sqlite:///./cedar_credit.db.
+alembic upgrade head
+python -m app.cli create-admin admin@example.test
+python -m app.cli seed-demo
+python -m uvicorn app.main:app --reload --port 8000
 ```
 
-**Terminal B — frontend**
+Generate a development JWT secret with:
+
+```bash
+python -c 'import secrets; print(secrets.token_urlsafe(48))'
+```
+
+**Terminal 2 — Web UI**
+
 ```bash
 cd frontend
 npm install
 npm run dev
 ```
 
-Open http://localhost:5173. Vite proxies `/api` to FastAPI at `localhost:8000`.
+Open **http://localhost:5173/operations**. For PostgreSQL/Docker instructions, see [docs/local-run.md](docs/local-run.md). The example admin account must be created using the CLI; borrower accounts can register in the workbench.
 
-For production builds configure an API reverse proxy or equivalent route forwarding; the Vite development proxy is not part of `vite preview`.
+## Synthetic turnover demonstration
 
-## Tests
-```bash
-cd backend && pytest -q
-cd frontend && npm run typecheck && npm run build
-```
+1. Create a borrower application for INR 500,000.
+2. Enter an unverified `turnover` observation of `1300000` and alternative `[1800000]`.
+3. Evaluate seeded fictional Lender A (minimum INR 1,500,000) and Lender B (minimum INR 1,000,000).
+4. A fails and is counterfactually unstable; B passes and remains stable relative to the supplied candidates.
+5. Schedule human review. Verify/correct the fact to INR 1,800,000, creating evidence revision 2.
+6. Check that affected rules are selectively recomputed and old evaluations remain in history.
+7. Explore optional synthetic offers, mock payments, and utilization evidence.
 
-API docs: http://localhost:8000/docs. Health: http://localhost:8000/api/v1/health.
+Note that **counterfactual stability only quantifies over provided candidate values** and that the decision result is **preliminary**.
 
-## Architecture
+## Tests and safety
 
-A modular monolith is planned, with separate services for:
+The CI workflows run TypeScript checking, a Vite production build, PostgreSQL migrations, synthetic seeding, and Python unit/integration tests. Green checks verify source/build/test behavior, **not** bank-grade security, OCR accuracy or production readiness.
 
-1. Identity and consent (Phase 2)
-2. Applications and lender catalog (Phase 3)
-3. RG-03 versioned business rules (Phase 4)
-4. RG-02 documents and evidence registry (Phase 5)
-5. Evidence dependency and counterfactual engine (Phase 6)
-6. RG-09 review scheduler and selective re-evaluation (Phase 7)
-7. Offers, mock disbursements and repayment (Phase 8)
-8. RG-04 end-use evidence verification (Phase 9)
-9. System integration, audit and regression checks (Phase 10)
+No private credentials, actual borrower documents, or payment information should be committed. Keep any `.env` file, virtual environments, uploads and local databases outside version control.
 
-See [docs/architecture.md](docs/architecture.md) for boundaries and phase acceptance criteria.
-
-## Security
-
-- No genuine identity, loan, or payment services are connected.
-- Do not upload personal or financial records to this scaffold.
-- No passwords, keys, or sensitive sample borrower data are committed.
-- Server-side access control and persistent storage are **planned, not implemented**.
-
-## Repository status
-
-This code can be committed into a newly created `CEDAR-Credit` GitHub repository. Phase 1 does not claim production readiness or verified research novelty.
+**Research status:** Individual approaches (OCR, rule engines, provenance, feature acquisition, decision review) have known prior art. The particular architecture's novelty, robustness and empirical advantage are **not proven** by this prototype.
