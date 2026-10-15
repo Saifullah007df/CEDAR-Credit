@@ -48,4 +48,5 @@ def test_openapi_contract_published():
 
 
 def test_unknown_api_route_returns_404():
-    assert client.get("/api/v1/loans").status_code == 404
+    assert client.get("/api/v1/loans").status_code == 401
+    assert client.get("/api/v1/this-route-does-not-exist").status_code == 404

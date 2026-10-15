@@ -2,8 +2,8 @@ import { useState } from 'react';
 import type { FormEvent } from 'react';
 import { ArrowLeft, ArrowRight, ClipboardCheck } from 'lucide-react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { DataState, Empty, ErrorBanner, Feedback, FormField, Metric, Notice,
-  PageTitle, Panel, StatePill, Submit, useAction, useLoad } from '../components/Shared';
+import { DataState, Empty, Feedback, FormField, Metric, Notice,
+  PageTitle, Panel, StatePill, useAction, useLoad } from '../components/Shared';
 import type { Evidence, EvidenceRevision, ReviewTask } from '../lib/types';
 
 export function ReviewerDashboard() {

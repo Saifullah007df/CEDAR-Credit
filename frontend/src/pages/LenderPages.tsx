@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ArrowRight, Building2, Landmark, ListChecks } from 'lucide-react';
+import { ArrowRight, Landmark, ListChecks } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useSession } from '../lib/session';
 import { DataState, Empty, Metric, Notice, PageTitle, Panel, StatePill,
