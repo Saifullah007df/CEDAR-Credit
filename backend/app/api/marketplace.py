@@ -272,8 +272,8 @@ async def upload_document(app_id: int, label: str, file: UploadFile = File(...),
         raise HTTPException(413, "Document must be between 1 byte and 5MB")
     mime = file.content_type or ""
     signatures = {"application/pdf": data.startswith(b"%PDF-"),
-                  "image/png": data.startswith(b"\\x89PNG\\r\\n\\x1a\\n"),
-                  "image/jpeg": data.startswith(b"\\xff\\xd8\\xff")}
+                  "image/png": data.startswith(bytes.fromhex("89504e470d0a1a0a")),
+                  "image/jpeg": data.startswith(bytes.fromhex("ffd8ff"))}
     if not signatures.get(mime, False):
         raise HTTPException(415, "Only real PDF, PNG and JPEG documents are accepted")
     safe_name = Path(file.filename or "upload").name[:150]
