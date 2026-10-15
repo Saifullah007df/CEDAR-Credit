@@ -206,3 +206,14 @@ class DocumentExtraction(Base):
     candidates: Mapped[dict] = mapped_column(JSON, default=dict)
     verified: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+
+class RepaymentSchedule(Base):
+    __tablename__ = "repayment_schedules"
+    __table_args__ = (UniqueConstraint("loan_id", "installment"),)
+    id: Mapped[int] = mapped_column(primary_key=True)
+    loan_id: Mapped[int] = mapped_column(ForeignKey("loans.id"), index=True)
+    installment: Mapped[int] = mapped_column(Integer)
+    due_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    amount_due: Mapped[Decimal] = mapped_column(Numeric(14,2))
+    amount_paid: Mapped[Decimal] = mapped_column(Numeric(14,2), default=Decimal("0"))
+    status: Mapped[str] = mapped_column(String(20), default="pending")

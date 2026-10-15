@@ -20,7 +20,7 @@ from app.db import get_db
 from app.models import (
     Application, Borrower, DependencyEdge, Document, DocumentExtraction, EvidenceFact, EvidenceRevision,
     Evaluation, Lender, Loan, LoanOffer, LoanProduct, Policy, PolicyRule, Repayment,
-    ReviewTask, RuleResult, User, UtilizationClaim, UtilizationLink,
+    ReviewTask, RuleResult, RepaymentSchedule, User, UtilizationClaim, UtilizationLink,
 )
 from app.research import (
     PASS, UNKNOWN, evaluate_rules, review_priority, selective_recompute, stability,
@@ -532,6 +532,13 @@ def mock_disburse(loan_id: int, db: Session = Depends(get_db), user: User = Depe
         raise HTTPException(409, "Loan must be in accepted simulated state")
     loan.status = "mock_disbursed"
     loan.disbursed_at = datetime.now(timezone.utc)
+    from app.servicing import demo_schedule
+    offer = db.get(LoanOffer, loan.offer_id)
+    for entry in demo_schedule(offer.amount, offer.apr, loan.disbursed_at):
+        db.add(RepaymentSchedule(
+            loan_id=loan.id, installment=entry["installment"],
+            due_at=entry["due_at"], amount_due=entry["amount_due"],
+            amount_paid=Decimal("0"), status="pending"))
     audit(db, user, "loan.mock_disburse", "loan", loan.id)
     db.commit()
     return {"loan_id": loan.id, "status": loan.status, "money_transferred": False}
@@ -542,6 +549,20 @@ def mock_repayment(loan_id: int, payload: RepaymentCreate, db: Session = Depends
     loan = db.get(Loan, loan_id)
     if not loan or loan.status != "mock_disbursed":
         raise HTTPException(409, "Simulated loan is not disbursed")
+    rows = db.scalars(select(RepaymentSchedule).where(RepaymentSchedule.loan_id == loan.id)
+                      .order_by(RepaymentSchedule.installment)).all()
+    remaining_due = sum((x.amount_due - x.amount_paid for x in rows), Decimal("0"))
+    if payload.amount > remaining_due:
+        raise HTTPException(422, "Mock repayment exceeds outstanding simulated installment balance")
+    remaining = payload.amount
+    for installment in rows:
+        if remaining <= 0:
+            break
+        outstanding = installment.amount_due - installment.amount_paid
+        applied = min(remaining, outstanding)
+        installment.amount_paid += applied
+        remaining -= applied
+        installment.status = "paid" if installment.amount_paid >= installment.amount_due else "partial"
     payment = Repayment(loan_id=loan.id, amount=payload.amount, reference=f"DEMO-{uuid4().hex[:12]}")
     db.add(payment)
     db.flush()
@@ -626,3 +647,36 @@ def list_extractions(app_id: int, document_id: int, db: Session = Depends(get_db
                       .order_by(DocumentExtraction.id.desc())).all()
     return [{"id": r.id, "engine": r.engine, "language": r.language, "status": r.status,
              "text": r.text, "candidates": r.candidates, "verified": False} for r in rows]
+
+@router.get("/loans/{loan_id}/schedule")
+def loan_schedule(loan_id: int, db: Session = Depends(get_db), user: User = Depends(current_user)):
+    loan, offer = authorized_loan(db, loan_id, user)
+    rows = db.scalars(select(RepaymentSchedule).where(RepaymentSchedule.loan_id == loan.id)
+                      .order_by(RepaymentSchedule.installment)).all()
+    now = datetime.now(timezone.utc)
+    installments = []
+    for r in rows:
+        due_at = r.due_at if r.due_at.tzinfo else r.due_at.replace(tzinfo=timezone.utc)
+        status = ("overdue" if due_at < now and r.amount_paid < r.amount_due
+                  else r.status)
+        installments.append({"installment": r.installment, "due_at": due_at.isoformat(),
+                             "amount_due": r.amount_due, "amount_paid": r.amount_paid,
+                             "status": status})
+    return {"loan_id": loan.id, "schedule_type": "12_month_demo_amortization",
+            "simulation": True, "installments": installments}
+
+@router.post("/admin/utilization/{claim_id}/review")
+def review_utilization(claim_id: int, db: Session = Depends(get_db),
+                       user: User = Depends(roles("platform_admin", "reviewer"))):
+    claim = db.get(UtilizationClaim, claim_id)
+    if claim is None:
+        raise HTTPException(404, "Claim not found")
+    links = db.scalars(select(UtilizationLink).where(UtilizationLink.claim_id == claim.id)).all()
+    if not links:
+        raise HTTPException(409, "Supporting document linkage required for manual review")
+    claim.status = "reviewed_evidence_present"
+    audit(db, user, "utilization.manual_review", "utilization_claim", claim.id,
+          linked_documents=[l.document_id for l in links])
+    db.commit()
+    return {"claim_id": claim.id, "status": claim.status, "fraud_determination": None,
+            "warning": "Evidence linkage is not proof of proper use or a fraud verdict."}
