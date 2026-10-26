@@ -1,0 +1,11 @@
+.git
+.env
+*.db
+*.db-*
+__pycache__
+.pytest_cache
+node_modules
+uploads
+*.zip
+*.png
+*.log
