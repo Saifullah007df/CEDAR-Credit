@@ -1,6 +1,6 @@
 # CEDAR v6.1 — Self-hosted, role-separated loan evidence and financial reconciliation
 
-**Status: functional self-hosted development build; NOT a production-authorized banking product.** No GitHub push has occurred. This package contains real backend operations and local browser UI, plus reproducible migration/tests. It requires **no external bank, lending, OCR, SMS, authentication or cloud API during normal runtime.** The browser calls only the locally hosted FastAPI application (`/v1/*`).
+**Status: functional self-hosted development build; NOT a production-authorized banking product.** This source is published on the `feature/cedar-v6.1-role-portals` review branch; it is not a production release. This package contains real backend operations and local browser UI, plus reproducible migration/tests. It requires **no external bank, lending, OCR, SMS, authentication or cloud API during normal runtime.** The browser calls only the locally hosted FastAPI application (`/v1/*`).
 
 ## Implemented and tested in this package
 
@@ -95,4 +95,4 @@ CEDAR does **not** claim to know Samunnati's real chart of accounts, authoritati
 
 ## GitHub
 
-No GitHub repository has been created or updated. Obtain explicit review and approval before publication.
+Published for review in `Saifullah007df/CEDAR-Credit` on `feature/cedar-v6.1-role-portals` in a draft pull request. The existing `main` application remains unchanged; production deployment still requires independent testing and approval.
