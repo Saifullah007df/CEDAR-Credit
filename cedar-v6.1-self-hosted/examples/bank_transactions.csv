@@ -1,0 +1,3 @@
+loan_id,external_id,payee,amount
+LN-DEMO-001,SYN-EXAMPLE-01,Example Seed Supplier,15000.00
+LN-DEMO-001,SYN-EXAMPLE-02,Example Fertilizer Supplier,8000.00

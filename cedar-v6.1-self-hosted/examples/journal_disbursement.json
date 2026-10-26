@@ -1,0 +1,12 @@
+{
+  "source": "EXAMPLE-GL",
+  "external_id": "SYN-GL-0001",
+  "loan_id": "LN-DEMO-001",
+  "posting_date": "2026-10-26",
+  "journal_type": "DISBURSEMENT",
+  "currency": "INR",
+  "lines": [
+    {"account":"LOAN_RECEIVABLE","debit":"500000.00","credit":"0.00"},
+    {"account":"BANK_CASH","debit":"0.00","credit":"500000.00"}
+  ]
+}

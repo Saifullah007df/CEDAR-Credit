@@ -1,0 +1,60 @@
+name: cedar-v6-role-portals
+services:
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: cedar
+      POSTGRES_USER: cedar
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Choose a strong local PostgreSQL password}
+    volumes:
+      - cedar_db:/var/lib/postgresql/data
+    networks: [cedar_internal]
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U cedar -d cedar']
+      interval: 5s
+      timeout: 5s
+      retries: 15
+  api:
+    build: .
+    image: cedar-v6-role-portals:local
+    restart: unless-stopped
+    depends_on:
+      db: {condition: service_healthy}
+    ports: ['127.0.0.1:8000:8000']
+    environment: &api_environment
+      DATABASE_URL: postgresql+psycopg://cedar:${POSTGRES_PASSWORD}@db:5432/cedar
+      CEDAR_DEMO_MODE: 'false'
+      CEDAR_AUTO_CREATE_SCHEMA: 'false'
+      CEDAR_REQUIRE_MALWARE_SCAN: 'true'
+      CEDAR_JWT_SECRET: ${CEDAR_JWT_SECRET:?Set a strong random JWT signing secret}
+      CEDAR_UPLOAD_DIR: /app/uploads
+      CEDAR_CORS_ORIGINS: http://localhost:8000,http://127.0.0.1:8000
+    volumes:
+      - cedar_docs:/app/uploads
+      - ./deploy/clamav:/var/lib/clamav:ro
+    networks: [cedar_internal]
+    healthcheck:
+      test: ['CMD','python','-c','import urllib.request;urllib.request.urlopen("http://127.0.0.1:8000/v1/health",timeout=4)']
+      interval: 15s
+      timeout: 5s
+      retries: 6
+    command: ['sh','-c','alembic upgrade head && exec uvicorn backend.app:app --host 0.0.0.0 --port 8000']
+  worker:
+    image: cedar-v6-role-portals:local
+    build: .
+    restart: unless-stopped
+    depends_on:
+      api: {condition: service_healthy}
+    environment: *api_environment
+    volumes:
+      - cedar_docs:/app/uploads
+      - ./deploy/clamav:/var/lib/clamav:ro
+    networks: [cedar_internal]
+    command: ['python','-m','backend.worker']
+networks:
+  cedar_internal:
+    internal: true
+volumes:
+  cedar_db:
+  cedar_docs:

@@ -1,0 +1,14 @@
+*.db
+*.sqlite3
+.env
+.env.*
+!.env.example
+__pycache__/
+.pytest_cache/
+*.py[cod]
+.venv/
+node_modules/
+dist/
+uploads/
+*.log
+coverage/
